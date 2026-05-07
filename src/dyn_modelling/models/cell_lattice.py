@@ -62,22 +62,24 @@ def compute_rhs(g:ig.Graph,dist_matrix:list, a_params:np.array, l_params:np.arra
     w = compute_weights(dist_matrix, neigh_order)
 
     def rhs(t:float, x:np.array) -> np.array:
-        u = x[0:N]
-        v = x[N:2*N]
-        s = x[2*N:3*N]
+        
+        s_vals = x[2::3]  # Extract s_i values for all cells
 
-        du_dt = np.zeros(N)
-        dv_dt = np.zeros(N)
-        ds_dt = np.zeros(N)
-
-        S_ext_t = external_signal(t, t_on, t_off)  
+        S_ext_t = external_signal(t, t_on, t_off) 
+     
+        dx_dt = np.zeros_like(x)
         
         for i in range(N):
-            du_dt[i] = l_u * (-u[i] + a_u/(1+v[i]**2) + S_ext_t * a_us/(1 + (np.sum(w[i]*s))**2))
-            dv_dt[i] = l_v * (-v[i] + a_v/(1+u[i]**2))
-            ds_dt[i] = l_s * (-s[i] + a_s*u[i]**2/(1+u[i]**2))
+        
+            ui = x[3 * i]
+            vi = x[3 * i + 1]
+            si = x[3 * i + 2]
 
-        return np.concatenate([du_dt, dv_dt, ds_dt])
+            dx_dt[3*i] = l_u * (-ui + a_u/(1+vi**2) + S_ext_t * a_us/(1 + (np.sum(w[i]*s_vals))**2))
+            dx_dt[3*i + 1] = l_v * (-vi + a_v/(1+ui**2))
+            dx_dt[3*i + 2] = l_s * (-si + a_s*ui**2/(1+ui**2))
+
+        return dx_dt
 
     return rhs
 
