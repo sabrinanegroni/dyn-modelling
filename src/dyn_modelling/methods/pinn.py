@@ -181,10 +181,9 @@ def train(ann_params: list, a: np.ndarray, T: Array, Y: Array,
     momentum : float
         Momentum coefficient for SGD.
 
-    Returns
-    -------
+    Returns:
+    
     ann_params : list   trained ANN parameters
-    a : np.ndarray      identified model parameters
     a_list : list       history of model parameters
     loss_history : list loss at each step
     """
@@ -204,6 +203,6 @@ def train(ann_params: list, a: np.ndarray, T: Array, Y: Array,
         loss_history.append(float(batch_loss(ann_params, a, T, Y, lmbd)))
 
         if i % max(1, n_epochs // 10) == 0: #print every 10% of epochs
-            print(f"[{i:>6}] loss = {loss_history[-1]:.6f} | a = {a}")
+            print(f"[{i:>6}] loss = {loss_history[-1]:.6f} | a = {a_list[-1]}")
 
-    return ann_params, a, a_list, loss_history
+    return ann_params, a_list, loss_history
