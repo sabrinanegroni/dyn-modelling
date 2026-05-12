@@ -43,7 +43,7 @@ def plot_trajectories(t: np.ndarray, y: np.ndarray, figsize: tuple = (18, 5)) ->
 
 
 # ---------------------------------------------------------------------------
-# PINN training
+# PINN
 # ---------------------------------------------------------------------------
 
 def plot_loss(loss_history: list, figsize: tuple = (10, 4)) -> None:
@@ -138,5 +138,58 @@ def plot_predictions(t: np.ndarray, y_pred: np.ndarray, y_true: np.ndarray,
         ax.tick_params(axis="both", labelsize=12)
         ax.legend(fontsize=13, loc="best")
 
+    plt.tight_layout()
+    plt.show()
+
+#----------------------------------------------------------------------------
+# NEURAL ODE
+#----------------------------------------------------------------------------
+
+
+def plot_phase_portrait(y: np.ndarray, y_pred: np.ndarray = None,
+                        n_cells: int = None,
+                        figsize: tuple = (18, 12)) -> None:
+    """
+    Plot phase portrait u vs v for each cell.
+
+    Parameters
+    ----------
+    y : np.ndarray
+        True trajectories
+    y_pred : np.ndarray, optional
+        Predicted trajectories. If provided, overlays on true.
+    n_cells : int, optional
+        Number of cells to plot. Defaults to all.
+    """
+    N = y.shape[1] // 3
+    if n_cells is None:
+        n_cells = N
+
+    ncols = 5
+    nrows = int(np.ceil(n_cells / ncols))
+    fig, axes = plt.subplots(nrows=nrows, ncols=ncols, figsize=figsize)
+    axes = axes.flatten()
+
+    for i in range(n_cells):
+        u_true = y[:, 3 * i]
+        v_true = y[:, 3 * i + 1]
+        axes[i].plot(u_true, v_true, "-", color="steelblue", label="true")
+
+        if y_pred is not None:
+            u_pred = y_pred[:, 3 * i]
+            v_pred = y_pred[:, 3 * i + 1]
+            axes[i].plot(u_pred, v_pred, "--", color="crimson", label="predicted")
+
+        axes[i].set_title(f"Cell {i+1}", fontsize=9)
+        axes[i].set_xlabel("u", fontsize=8)
+        axes[i].set_ylabel("v", fontsize=8)
+        if i == 0:
+            axes[i].legend(fontsize=7)
+
+    # hide unused axes
+    for j in range(n_cells, len(axes)):
+        axes[j].set_visible(False)
+
+    plt.suptitle("Phase portrait u vs v", fontsize=14)
     plt.tight_layout()
     plt.show()
