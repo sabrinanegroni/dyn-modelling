@@ -4,6 +4,7 @@ import numpy as np
 from jax import Array
 import equinox as eqx
 import diffrax
+import optax
 
 
 # ---------------------------------------------------------------------------
@@ -73,7 +74,7 @@ def solve_node(vf_params: list, y0: Array, ts: Array) -> Array:
         y0=y0,
         stepsize_controller=diffrax.PIDController(rtol=1e-3, atol=1e-6),
         saveat=diffrax.SaveAt(ts=ts),
-        max_steps=50_000
+        max_steps=1_000
     )
     return solution.ys
 
@@ -98,8 +99,26 @@ def make_neural_ode():
 # ---------------------------------------------------------------------------
 # TRAINING
 # ---------------------------------------------------------------------------
+def train_adam(vf_params, y0, ts, y_true, loss_fn, grad_fn,
+          n_epochs=10_000, lr=1e-3) -> tuple:
+    
+    optimizer = optax.adam(lr)
+    opt_state = optimizer.init(vf_params)
+    loss_history = []
 
-def train(vf_params: list, y0: np.ndarray, ts: np.ndarray, y_true: np.ndarray,
+    for i in range(n_epochs):
+        grads = grad_fn(vf_params, y0, ts, y_true)
+        updates, opt_state = optimizer.update(grads, opt_state)
+        vf_params = optax.apply_updates(vf_params, updates)
+
+        loss_history.append(float(loss_fn(vf_params, y0, ts, y_true)))
+
+        if i % max(1, n_epochs // 10) == 0:
+            print(f"[{i:>6}] loss = {loss_history[-1]:.6f}")
+
+    return vf_params, loss_history
+
+def train_SGD(vf_params: list, y0: np.ndarray, ts: np.ndarray, y_true: np.ndarray,
           loss_fn, grad_fn,
           n_epochs: int = 10_000,
           lr: float = 1e-3,
@@ -107,22 +126,6 @@ def train(vf_params: list, y0: np.ndarray, ts: np.ndarray, y_true: np.ndarray,
     """
     Train the Neural ODE using SGD with momentum.
 
-    Parameters
-    ----------
-    vf_params : list        initial vector field parameters from init_vf_params()
-    y0 : np.ndarray         initial condition shape (3*N,)
-    ts : np.ndarray         time points shape (n_steps,)
-    y_true : np.ndarray     true trajectories shape (n_steps, 3*N)
-    loss_fn : callable      from make_neural_ode()
-    grad_fn : callable      from make_neural_ode()
-    n_epochs : int          number of training steps
-    lr : float              learning rate
-    momentum : float        momentum coefficient
-
-    Returns
-    -------
-    vf_params : list        trained vector field parameters
-    loss_history : list     loss at each step
     """
     mom = [p * 0 for p in vf_params]
     loss_history = []
@@ -144,3 +147,4 @@ def train(vf_params: list, y0: np.ndarray, ts: np.ndarray, y_true: np.ndarray,
             print(f"[{i:>6}] loss = {loss_history[-1]:.6f}")
 
     return vf_params, loss_history
+

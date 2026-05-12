@@ -157,7 +157,7 @@ def plot_phase_portrait(y: np.ndarray, y_pred: np.ndarray = None,
     y : np.ndarray
         True trajectories
     y_pred : np.ndarray, optional
-        Predicted trajectories. If provided, overlays on true.
+        Predicted trajectories.
     n_cells : int, optional
         Number of cells to plot. Defaults to all.
     """
