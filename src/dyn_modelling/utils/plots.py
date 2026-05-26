@@ -158,6 +158,7 @@ def plot_phase_portrait(y: np.ndarray, y_pred: np.ndarray = None,
         True trajectories
     y_pred : np.ndarray, optional
         Predicted trajectories.
+        
     n_cells : int, optional
         Number of cells to plot. Defaults to all.
     """
@@ -191,5 +192,77 @@ def plot_phase_portrait(y: np.ndarray, y_pred: np.ndarray = None,
         axes[j].set_visible(False)
 
     plt.suptitle("Phase portrait u vs v", fontsize=14)
+    plt.tight_layout()
+    plt.show()
+
+
+# ---------------------------------------------------------------------------
+# DMD
+# ---------------------------------------------------------------------------
+
+def plot_dmd_reconstruction(t: np.ndarray, X_true: np.ndarray, X_rec: np.ndarray, title: str = "DMD reconstruction",
+                        figsize: tuple = (18, 5)) -> None:
+    """
+    Plot DMD reconstruction vs true trajectories.
+
+    Parameters
+    ----------
+    t : np.ndarray
+        Time points, shape (n_steps,).
+    X_true : np.ndarray
+        True trajectories.
+    X_rec : np.ndarray
+        DMD reconstruction.
+    title : str, optional
+        Title for the plot.
+    figsize : tuple, optional
+        Figure size.
+    """
+    N = X_true.shape[1] // 3
+    fig, (ax1, ax2, ax3) = plt.subplots(ncols=3, figsize=figsize)
+    for i in range(N):
+        label_true = "True" if i == 0 else None
+        label_dmd = "DMD" if i == 0 else None
+
+        ax1.plot(t, X_true[:, 3 * i], "--", color="steelblue", label=label_true)
+        ax1.plot(t, X_rec[:, 3 * i], "-", color="crimson", label=label_dmd)
+
+        ax2.plot(t, X_true[:, 3 * i + 1], "--", color="steelblue", label=label_true)
+        ax2.plot(t, X_rec[:, 3 * i + 1], "-", color="crimson", label=label_dmd)
+
+        ax3.plot(t, X_true[:, 3 * i + 2], "--", color="steelblue", label=label_true)
+        ax3.plot(t, X_rec[:, 3 * i + 2], "-", color="crimson", label=label_dmd)
+
+
+    for ax in [ax1, ax2, ax3]:
+        ax.set_xlabel("Time")
+        ax.legend(fontsize=7)
+
+
+    ax1.set_title("u variables")
+    ax2.set_title("v variables")
+    ax3.set_title("s variables")
+
+    plt.tight_layout()
+    plt.show()
+
+
+def plot_eigenvalues(eigs: np.ndarray, title: str = "DMD eigenvalues",
+                     figsize: tuple = (6, 6)) -> None:
+    """Plot DMD eigenvalues in the complex plane."""
+    fig, ax = plt.subplots(figsize=figsize)
+
+    ax.plot(np.real(eigs), np.imag(eigs), "o", markersize=8, label="eigenvalues")
+
+    theta = np.linspace(0, 2 * np.pi, 400)
+    ax.plot(np.cos(theta), np.sin(theta), "k--", linewidth=1, label="unit circle")
+    ax.axhline(0, color="gray", linewidth=0.5)
+    ax.axvline(0, color="gray", linewidth=0.5)
+
+    ax.set_xlabel("Re(λ)")
+    ax.set_ylabel("Im(λ)")
+    ax.set_title(title)
+    ax.axis("equal")
+    ax.legend()
     plt.tight_layout()
     plt.show()
