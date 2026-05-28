@@ -113,8 +113,6 @@ def plot_predictions(t: np.ndarray, y_pred: np.ndarray, y_true: np.ndarray,
     y_true : np.ndarray
         True observations, shape (n_steps, 3*N) interleaved layout.
     """
-    colors = ["#1f77b4", "#ff7f0e", "#2ca02c", "#d62728"]
-
     u_pred = y_pred[:, 0::3]
     v_pred = y_pred[:, 1::3]
     s_pred = y_pred[:, 2::3]
@@ -130,13 +128,13 @@ def plot_predictions(t: np.ndarray, y_pred: np.ndarray, y_true: np.ndarray,
                                     [u_true, v_true, s_true],
                                     axs):
         for i in range(true.shape[1]):
-            ax.plot(t, true[:, i], "--", color=colors[i % len(colors)], label=f"True {label}{i+1}")
-            ax.plot(t, pred[:, i], color=colors[i % len(colors)], label=f"Predicted {label}{i+1}")
-        ax.set_title(f"True vs Predicted {label}", fontsize=16)
-        ax.set_xlabel("Time", fontsize=14)
-        ax.set_ylabel("Value", fontsize=14)
-        ax.tick_params(axis="both", labelsize=12)
-        ax.legend(fontsize=13, loc="best")
+
+            label_true = "True" if i == 0 else None
+            label_pred = "Predicted" if i == 0 else None
+
+            ax.plot(t, true[:, i], "--", color="steelblue", linewidth=1.5, alpha=0.8,label=label_true,)
+
+            ax.plot(t, pred[:, i],"-", color="crimson", linewidth=1.5, alpha=0.8, label=label_pred)
 
     plt.tight_layout()
     plt.show()

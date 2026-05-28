@@ -1,9 +1,11 @@
 import numpy as np
 from pydmd import DMD
+from pydmd import HODMD
+
 
 
 # ---------------------------------------------------------------------------
-# Fit DMD model
+# Fit
 # ---------------------------------------------------------------------------
 
 def fit_dmd(X: np.ndarray, svd_rank: int) -> DMD:
@@ -24,6 +26,30 @@ def fit_dmd(X: np.ndarray, svd_rank: int) -> DMD:
     dmd = DMD(svd_rank=svd_rank, exact=True)
     dmd.fit(X)
     return dmd
+
+
+def fit_hodmd(X: np.ndarray, svd_rank: int = 0, d: int = 10) -> HODMD:
+    """
+    Fit Higher Order DMD model on trajectory data.
+
+    Parameters
+    ----------
+    X : np.ndarray
+        Snapshot matrix shape (3*N, n_steps).
+    svd_rank : int
+        SVD rank truncation. 0 = automatic.
+    d : int
+        Number of consecutive snapshots to stack (time delay order).
+        Higher d captures more nonlinear dynamics.
+
+    Returns
+    -------
+    hodmd : HODMD   fitted HODMD object
+    """
+    hodmd = HODMD(svd_rank=svd_rank, exact=True, d=d)
+    hodmd.fit(X)
+    return hodmd
+
 
 
 # ---------------------------------------------------------------------------
@@ -58,6 +84,17 @@ def reconstruct_analytic(dmd: DMD, X: np.ndarray) -> np.ndarray:
     b = np.linalg.pinv(modes) @ f0
     F_rec = modes @ (b[:, None] * (eigs[:, None] ** n[None, :]))
     return F_rec.T.real
+
+
+def reconstruct_hodmd(hodmd: HODMD) -> np.ndarray:
+    """
+    Reconstruct trajectories from fitted HODMD.
+
+    Returns
+    -------
+    X_rec : np.ndarray  shape (n_steps, 3*N)
+    """
+    return hodmd.reconstructed_data.real.T
 
 
 # ---------------------------------------------------------------------------
