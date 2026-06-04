@@ -1,6 +1,8 @@
 import numpy as np
 from pydmd import DMD
 from pydmd import HODMD
+from typing import Callable
+
 
 
 
@@ -35,13 +37,11 @@ def fit_hodmd(X: np.ndarray, svd_rank: int = 0, d: int = 10) -> HODMD:
     Parameters
     ----------
     X : np.ndarray
-        Snapshot matrix shape (3*N, n_steps).
+        Snapshot matrix.
     svd_rank : int
         SVD rank truncation. 0 = automatic.
     d : int
-        Number of consecutive snapshots to stack (time delay order).
-        Higher d captures more nonlinear dynamics.
-
+        Number of consecutive snapshots (time delay order).
     Returns
     -------
     hodmd : HODMD   fitted HODMD object
@@ -49,6 +49,27 @@ def fit_hodmd(X: np.ndarray, svd_rank: int = 0, d: int = 10) -> HODMD:
     hodmd = HODMD(svd_rank=svd_rank, exact=True, d=d)
     hodmd.fit(X)
     return hodmd
+
+
+def fit_edmd(X: np.ndarray, observables: list[Callable] , svd_rank: int = 0) -> tuple:
+    """
+    Fit Extended DMD model on trajectory data.
+
+    Parameters
+    ----------
+    X : np.ndarray
+        Snapshot matrix.
+    observables : list of callables
+        List of observables to apply to state.
+    svd_rank : int
+        SVD rank truncation. 0 = automatic.
+
+    Returns
+    -------
+    dmd : DMD   fitted DMD object on lifted space
+    """
+    X_lifted = np.vstack([obs(X) for obs in observables])
+    return fit_dmd(X_lifted, svd_rank) , X_lifted
 
 
 
@@ -62,7 +83,7 @@ def reconstruct(dmd: DMD) -> np.ndarray:
 
     Returns
     -------
-    X_rec : np.ndarray  shape (n_steps, 3*N)
+    X_rec : np.ndarray 
     """
     return dmd.reconstructed_data.real.T
 
@@ -92,7 +113,7 @@ def reconstruct_hodmd(hodmd: HODMD) -> np.ndarray:
 
     Returns
     -------
-    X_rec : np.ndarray  shape (n_steps, 3*N)
+    X_rec : np.ndarray
     """
     return hodmd.reconstructed_data.real.T
 
