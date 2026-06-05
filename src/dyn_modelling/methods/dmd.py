@@ -117,6 +117,15 @@ def reconstruct_hodmd(hodmd: HODMD) -> np.ndarray:
     """
     return hodmd.reconstructed_data.real.T
 
+def reconstruct_edmd(edmd: DMD, n_state:int) -> np.ndarray:
+    """
+    Reconstruct trajectories from fitted EDMD.
+
+    Returns
+    -------
+    X_rec : np.ndarray
+    """
+    return edmd.reconstructed_data.real[:n_state, :].T
 
 # ---------------------------------------------------------------------------
 # Analysis
