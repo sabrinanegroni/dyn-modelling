@@ -276,7 +276,7 @@ def plot_param_heatmap(results: dict, row_values: list, col_values: list, metric
                         row_label: str = "row", col_label: str = "svd_rank",
                         title: str = "Reconstruction error", cmap: str = "RdYlGn_r",
                         log_scale: bool = False, vmin: float = None, vmax: float = None,
-                        fmt: str = ".3f", figsize: tuple = (10, 5)) -> None:
+                        fmt: str = ".3f", fmt_fn: callable = None, figsize: tuple = (10, 5)) -> None:
     """Plot a heatmap of a scalar metric over a (row, col) hyperparameter sweep."""
     grid = np.array([[results[(rv, cv)][metric_key] for cv in col_values] for rv in row_values])
     norm = LogNorm(vmin=vmin or grid.min(), vmax=vmax or grid.max()) if log_scale else None
@@ -289,16 +289,16 @@ def plot_param_heatmap(results: dict, row_values: list, col_values: list, metric
     ax.set_xlabel(col_label); ax.set_ylabel(row_label); ax.set_title(title)
     plt.colorbar(im, ax=ax, extend="max" if (log_scale and vmax is not None) else None)
 
+    _fmt = fmt_fn or (lambda v: f"{v:{fmt}}")
     for i, j in product(range(len(row_values)), range(len(col_values))):
-        ax.text(j, i, f"{grid[i, j]:{fmt}}", ha="center", va="center", fontsize=7)
+        ax.text(j, i, _fmt(grid[i, j]), ha="center", va="center", fontsize=7)
 
     plt.tight_layout()
     plt.show()
 
 
 def plot_eigenvalue_grid(results: dict, row_values: list, col_values: list,
-                          row_label: str = "row", title: str = "Eigenvalues grid",
-                          highlight_row: float = None) -> None:
+                          row_label: str = "row", title: str = "Eigenvalues grid") -> None:
     """Plot a grid of DMD/EDMD eigenvalue scatter plots over a (row, col) sweep."""
     n_rows, n_cols = len(row_values), len(col_values)
     theta = np.linspace(0, 2 * np.pi, 300)
@@ -316,12 +316,6 @@ def plot_eigenvalue_grid(results: dict, row_values: list, col_values: list,
             ax.set_xlim(-1.4, 1.4); ax.set_ylim(-1.4, 1.4); ax.set_aspect("equal")
             ax.axhline(0, color="gray", lw=0.4); ax.axvline(0, color="gray", lw=0.4)
             ax.set_title(f"{row_label}={rv} r={cv}\n|λ|={r['max_abs_eig']:.4f}", fontsize=7)
-
-            if rv == highlight_row:
-                for spine in ax.spines.values():
-                    spine.set_edgecolor("red"); spine.set_linewidth(2)
-            if i == n_rows - 1: ax.set_xlabel("Re(λ)", fontsize=8)
-            if j == 0:          ax.set_ylabel("Im(λ)", fontsize=8)
 
     plt.tight_layout()
     plt.show()
@@ -350,7 +344,7 @@ def plot_reconstruction_grid(results: dict, row_values: list, col_values: list, 
                 ax.plot(t_sub, X[0, :n_col], lw=1.0, color="steelblue", label="true")
                 ax.plot(t_sub, X_rec[:n_col, 0], lw=0.8, color="tomato", ls="--", label="reconstruction")
 
-            ax.set_title(f"{row_label}={rv} r={cv}\nerr={r.get('recon_error', float('nan')):.3f}", fontsize=7)
+            ax.set_title(f"{row_label}={rv} r={cv}", fontsize=7)
             ax.tick_params(labelsize=6)
             if i == n_rows - 1: ax.set_xlabel("time", fontsize=7)
             if j == 0:          ax.set_ylabel("$x$", fontsize=7)
