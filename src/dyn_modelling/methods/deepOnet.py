@@ -10,29 +10,24 @@ class DeepONet(eqx.Module):
     trunk_net: eqx.Module
     bias: Array
 
-    def __init__(self, m: int, trunk_in: int, width: int, depth: int, interact_size: int, *, key):
-        """
-        m           : number of signal points (branch input size)
-        trunk_in    : dimension of query point (3: i, var, t)
-        interact_size : p, dimension of dot-product space
-        """
+    def __init__(self, input_size_branch: int, input_size_trunk: int, width_size: int, depth: int, interact_size: int, *, key):
+
         branch_key, trunk_key = jr.split(key)
 
         self.branch_net = eqx.nn.MLP(
-            in_size=m,
+            in_size=input_size_branch,
             out_size=interact_size,
-            width_size=width,
+            width_size=width_size,
             depth=depth,
             activation=jax.nn.tanh,
             key=branch_key,
         )
         self.trunk_net = eqx.nn.MLP(
-            in_size=trunk_in,
+            in_size=input_size_trunk,
             out_size=interact_size,
-            width_size=width,
+            width_size=width_size,
             depth=depth,
             activation=jax.nn.tanh,
-            final_activation=jax.nn.tanh,
             key=trunk_key,
         )
         self.bias = jnp.zeros(())
