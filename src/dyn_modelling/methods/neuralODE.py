@@ -89,7 +89,6 @@ def _loss(vf_params: list, y0: Array, ts: Array, y_true: Array) -> Array:
     return jnp.mean((y_pred - y_true) ** 2)
 
 
-
 def make_neural_ode():
     loss_fn = eqx.filter_jit(_loss)
     grad_fn = eqx.filter_jit(jax.grad(_loss, argnums=0))

@@ -6,47 +6,64 @@ import igraph as ig
 from matplotlib.colors import LogNorm
 from itertools import product
 
-# ---------------------------------------------------------------------------
-# Cell lattice
-# ---------------------------------------------------------------------------
+#----------------------------------------------------------------------------
+# GENERAL
+#----------------------------------------------------------------------------
 
 def plot_graph(g: ig.Graph, figsize: tuple = (5, 5)) -> None:
     """Plot the lattice graph."""
     fig, ax = plt.subplots(figsize=figsize)
     ig.plot(g, target=ax)
-    ax.set_title(f"Lattice graph — {g.vcount()} nodes")
+    ax.set_title(f"Lattice graph with {g.vcount()} nodes")
+    plt.show()
+
+
+def _plot_variable_grid(t: np.ndarray, y_true: np.ndarray, y_pred: np.ndarray = None,
+                         labels: tuple = ("True", "Predicted"),
+                         var_names: tuple = ("u", "v", "s"),
+                         colors: tuple = ("steelblue", "crimson"),
+                         styles: tuple = ("--", "-"),
+                         title: str = None, figsize: tuple = (18, 5)) -> None:
+    """
+    Core plot function: plots all trajectories for vars u, v, s in separate panels
+    
+    Optional: overlaying the predicted/reconstructed trajectories on top of the true
+
+    set y_pred=None to only plot the true trajectories.
+    """
+    n_vars = len(var_names)
+    N = y_true.shape[1] // n_vars
+    fig, axes = plt.subplots(ncols=n_vars, figsize=figsize)
+    axes = np.atleast_1d(axes)
+
+    for var_idx, (ax, name) in enumerate(zip(axes, var_names)):
+        for i in range(N):
+            label_true = labels[0] if (i == 0 and y_pred is not None) else None
+            ax.plot(t, y_true[:, n_vars * i + var_idx], styles[0], color=colors[0],
+                     linewidth=1.5, alpha=0.8, label=label_true)
+
+            if y_pred is not None:
+                label_pred = labels[1] if i == 0 else None
+                ax.plot(t, y_pred[:, n_vars * i + var_idx], styles[1], color=colors[1],
+                         linewidth=1.5, alpha=0.8, label=label_pred)
+
+        ax.set_title(f"{name} variables")
+        ax.set_xlabel("Time")
+        ax.set_ylabel(name)
+        if y_pred is not None:
+            ax.legend(fontsize=7)
+
+    if title:
+        fig.suptitle(title)
+    plt.tight_layout()
     plt.show()
 
 
 def plot_trajectories(t: np.ndarray, y: np.ndarray, figsize: tuple = (18, 5)) -> None:
     """
-    Plot u, v, s trajectories for all cells.
-
-    Parameters
-    ----------
-    t : np.ndarray  shape (n_steps,)
-    y : np.ndarray  shape (3*N, n_steps) interleaved layout [u0,v0,s0, u1,v1,s1,...]
+    Plot all trajectories for vars u, v, s in separate panels.
     """
-    N = y.shape[0] // 3
-    fig, (ax1, ax2, ax3) = plt.subplots(ncols=3, figsize=figsize)
-
-    for i in range(N):
-        ax1.plot(t, y[3 * i, :], "-")
-        ax2.plot(t, y[3 * i + 1, :], "-")
-        ax3.plot(t, y[3 * i + 2, :], "-")
-
-    for ax, label in zip([ax1, ax2, ax3], ["u", "v", "s"]):
-        ax.set_title(f"{label} variables")
-        ax.set_xlabel("Time")
-        ax.set_ylabel(label)
-
-    plt.tight_layout()
-    plt.show()
-
-
-# ---------------------------------------------------------------------------
-# PINN
-# ---------------------------------------------------------------------------
+    _plot_variable_grid(t, y.T, y_pred=None, figsize=figsize)
 
 def plot_loss(loss_history: list, figsize: tuple = (10, 4)) -> None:
     """Plot training loss over iterations."""
@@ -59,6 +76,29 @@ def plot_loss(loss_history: list, figsize: tuple = (10, 4)) -> None:
     plt.tight_layout()
     plt.show()
 
+def plot_train_val_loss(train_loss_history: list, val_loss_history: list, val_steps: list):
+    plt.figure(figsize=(10, 4))
+    plt.semilogy(train_loss_history, label="train")
+    plt.semilogy(val_steps, val_loss_history, label="val", marker="o", markersize=3)
+    plt.xlabel("Iteration")
+    plt.ylabel("Loss")
+    plt.title("Training vs Validation loss")
+    plt.legend()
+    plt.show()
+
+
+def plot_predictions(t: np.ndarray, y_pred: np.ndarray, y_true: np.ndarray,
+                      figsize: tuple = (10, 15)) -> None:
+    """
+    Plot predicted vs true u, v, s trajectories.
+    """
+    _plot_variable_grid(t, y_true, y_pred, labels=("True", "Predicted"), figsize=figsize)
+
+
+#----------------------------------------------------------------------------
+# PINNS
+#----------------------------------------------------------------------------
+
 
 def plot_parameter_evolution(a_list: np.ndarray, a_true: np.ndarray,
                               parameter_names: list[str] = None,
@@ -66,17 +106,6 @@ def plot_parameter_evolution(a_list: np.ndarray, a_true: np.ndarray,
                               figsize: tuple = (10, 6)) -> None:
     """
     Plot predicted parameter evolution vs true values.
-
-    Parameters
-    ----------
-    a_list : np.ndarray
-        shape (n_epochs, n_params) — history of predicted parameters.
-    a_true : np.ndarray
-        shape (n_params,) — true parameter values.
-    parameter_names : list[str]
-        Names for each parameter. Defaults to ['a_u', 'a_v', 'a_s', 'a_us'].
-    title : str
-        Plot title.
     """
     if parameter_names is None:
         parameter_names = ["a_u", "a_v", "a_s", "a_us"]
@@ -101,46 +130,6 @@ def plot_parameter_evolution(a_list: np.ndarray, a_true: np.ndarray,
     plt.show()
 
 
-def plot_predictions(t: np.ndarray, y_pred: np.ndarray, y_true: np.ndarray,
-                        figsize: tuple = (10, 15)) -> None:
-    """
-    Plot predicted vs true u, v, s trajectories.
-
-    Parameters
-    ----------
-    t : np.ndarray
-        Time points, shape (n_steps,).
-    y_pred : np.ndarray
-        ANN predictions, shape (n_steps, 3*N) interleaved layout.
-    y_true : np.ndarray
-        True observations, shape (n_steps, 3*N) interleaved layout.
-    """
-    u_pred = y_pred[:, 0::3]
-    v_pred = y_pred[:, 1::3]
-    s_pred = y_pred[:, 2::3]
-
-    u_true = y_true[:, 0::3]
-    v_true = y_true[:, 1::3]
-    s_true = y_true[:, 2::3]
-
-    fig, axs = plt.subplots(3, 1, figsize=figsize)
-
-    for label, pred, true, ax in zip(["u", "v", "s"],
-                                    [u_pred, v_pred, s_pred],
-                                    [u_true, v_true, s_true],
-                                    axs):
-        for i in range(true.shape[1]):
-
-            label_true = "True" if i == 0 else None
-            label_pred = "Predicted" if i == 0 else None
-
-            ax.plot(t, true[:, i], "--", color="steelblue", linewidth=1.5, alpha=0.8,label=label_true,)
-
-            ax.plot(t, pred[:, i],"-", color="crimson", linewidth=1.5, alpha=0.8, label=label_pred)
-
-    plt.tight_layout()
-    plt.show()
-
 #----------------------------------------------------------------------------
 # NEURAL ODE
 #----------------------------------------------------------------------------
@@ -151,16 +140,6 @@ def plot_phase_portrait(y: np.ndarray, y_pred: np.ndarray = None,
                         figsize: tuple = (18, 12)) -> None:
     """
     Plot phase portrait u vs v for each cell.
-
-    Parameters
-    ----------
-    y : np.ndarray
-        True trajectories
-    y_pred : np.ndarray, optional
-        Predicted trajectories.
-        
-    n_cells : int, optional
-        Number of cells to plot. Defaults to all.
     """
     N = y.shape[1] // 3
     if n_cells is None:
@@ -197,55 +176,15 @@ def plot_phase_portrait(y: np.ndarray, y_pred: np.ndarray = None,
 
 
 # ---------------------------------------------------------------------------
-# DMD
+# DMD/EDMD
 # ---------------------------------------------------------------------------
 
-def plot_dmd_reconstruction(t: np.ndarray, X_true: np.ndarray, X_rec: np.ndarray, title: str = "DMD reconstruction",
-                        figsize: tuple = (18, 5)) -> None:
+def plot_dmd_reconstruction(t: np.ndarray, X_true: np.ndarray, X_rec: np.ndarray,
+                             title: str = "DMD reconstruction", figsize: tuple = (18, 5)) -> None:
     """
     Plot DMD reconstruction vs true trajectories.
-
-    Parameters
-    ----------
-    t : np.ndarray
-        Time points, shape (n_steps,).
-    X_true : np.ndarray
-        True trajectories.
-    X_rec : np.ndarray
-        DMD reconstruction.
-    title : str, optional
-        Title for the plot.
-    figsize : tuple, optional
-        Figure size.
     """
-    N = X_true.shape[1] // 3
-    fig, (ax1, ax2, ax3) = plt.subplots(ncols=3, figsize=figsize)
-    for i in range(N):
-        label_true = "True" if i == 0 else None
-        label_dmd = "DMD" if i == 0 else None
-
-        ax1.plot(t, X_true[:, 3 * i], "--", color="steelblue", label=label_true)
-        ax1.plot(t, X_rec[:, 3 * i], "-", color="crimson", label=label_dmd)
-
-        ax2.plot(t, X_true[:, 3 * i + 1], "--", color="steelblue", label=label_true)
-        ax2.plot(t, X_rec[:, 3 * i + 1], "-", color="crimson", label=label_dmd)
-
-        ax3.plot(t, X_true[:, 3 * i + 2], "--", color="steelblue", label=label_true)
-        ax3.plot(t, X_rec[:, 3 * i + 2], "-", color="crimson", label=label_dmd)
-
-
-    for ax in [ax1, ax2, ax3]:
-        ax.set_xlabel("Time")
-        ax.legend(fontsize=7)
-
-
-    ax1.set_title("u variables")
-    ax2.set_title("v variables")
-    ax3.set_title("s variables")
-
-    plt.tight_layout()
-    plt.show()
-
+    _plot_variable_grid(t, X_true, X_rec, labels=("True", "DMD"), title=title, figsize=figsize)
 
 def plot_eigenvalues(eigs: np.ndarray, title: str = "DMD eigenvalues",
                      figsize: tuple = (6, 6)) -> None:
@@ -268,16 +207,12 @@ def plot_eigenvalues(eigs: np.ndarray, title: str = "DMD eigenvalues",
     plt.show()
 
 
-from itertools import product
-from matplotlib.colors import LogNorm
-
-
 def plot_param_heatmap(results: dict, row_values: list, col_values: list, metric_key: str,
                         row_label: str = "row", col_label: str = "svd_rank",
                         title: str = "Reconstruction error", cmap: str = "RdYlGn_r",
                         log_scale: bool = False, vmin: float = None, vmax: float = None,
                         fmt: str = ".3f", fmt_fn: callable = None, figsize: tuple = (10, 5)) -> None:
-    """Plot a heatmap of a scalar metric over a (row, col) hyperparameter sweep."""
+    """Plot a heatmap of a metric over a (row, col) hyperparameter sweep."""
     grid = np.array([[results[(rv, cv)][metric_key] for cv in col_values] for rv in row_values])
     norm = LogNorm(vmin=vmin or grid.min(), vmax=vmax or grid.max()) if log_scale else None
 
@@ -299,7 +234,7 @@ def plot_param_heatmap(results: dict, row_values: list, col_values: list, metric
 
 def plot_eigenvalue_grid(results: dict, row_values: list, col_values: list,
                           row_label: str = "row", title: str = "Eigenvalues grid") -> None:
-    """Plot a grid of DMD/EDMD eigenvalue scatter plots over a (row, col) sweep."""
+    """Plot a grid of DMD/EDMD eigenvalue scatter plots for all combinations."""
     n_rows, n_cols = len(row_values), len(col_values)
     theta = np.linspace(0, 2 * np.pi, 300)
     fig, axes = plt.subplots(n_rows, n_cols, figsize=(3 * n_cols, 3 * n_rows),
@@ -353,3 +288,39 @@ def plot_reconstruction_grid(results: dict, row_values: list, col_values: list, 
         axes[0, -1].legend(fontsize=6)
     plt.tight_layout()
     plt.show()
+
+# ---------------------------------------------------------------------------
+# DeepONet
+# ---------------------------------------------------------------------------
+
+
+def plot_predictions_grid_test(t_eval: np.ndarray, predictions_test: np.ndarray, y_test: np.ndarray,
+                                    N: int, n_steps: int, var_idx: int = 0, n_cols: int = 6,
+                                    var_names: tuple = ("u", "v", "s")) -> plt.Figure:
+    """
+    Plot a grid of prediction over test trajectories.
+    """
+    n_test = predictions_test.shape[0]
+    n_rows = int(np.ceil(n_test / n_cols))
+
+    fig, axes = plt.subplots(n_rows, n_cols, figsize=(3 * n_cols, 2.5 * n_rows), sharex=True)
+    axes = axes.flatten()
+
+    for idx in range(n_test):
+        # reshape flat (cell-major) output into interleaved (n_steps, 3*N),
+        # i.e. [u0,v0,s0, u1,v1,s1, ...] per time step
+        pred_traj = np.array(predictions_test[idx]).reshape(N, 3, n_steps).transpose(2, 0, 1).reshape(n_steps, 3 * N)
+        true_traj = np.array(y_test[idx]).reshape(N, 3, n_steps).transpose(2, 0, 1).reshape(n_steps, 3 * N)
+
+        ax = axes[idx]
+        ax.plot(t_eval, true_traj[:, var_idx::3], color="tab:blue", lw=0.8, alpha=0.6)
+        ax.plot(t_eval, pred_traj[:, var_idx::3], color="crimson", lw=0.8, alpha=0.6)
+        ax.set_title(f"test traj {idx}", fontsize=8)
+        ax.tick_params(labelsize=6)
+
+    for ax in axes[n_test:]:
+        ax.axis("off")
+
+    fig.suptitle(f"{var_names[var_idx]} predictions", y=1.00)
+    fig.tight_layout()
+    return fig
