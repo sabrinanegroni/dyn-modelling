@@ -307,8 +307,6 @@ def plot_predictions_grid_test(t_eval: np.ndarray, predictions_test: np.ndarray,
     axes = axes.flatten()
 
     for idx in range(n_test):
-        # reshape flat (cell-major) output into interleaved (n_steps, 3*N),
-        # i.e. [u0,v0,s0, u1,v1,s1, ...] per time step
         pred_traj = np.array(predictions_test[idx]).reshape(N, 3, n_steps).transpose(2, 0, 1).reshape(n_steps, 3 * N)
         true_traj = np.array(y_test[idx]).reshape(N, 3, n_steps).transpose(2, 0, 1).reshape(n_steps, 3 * N)
 
