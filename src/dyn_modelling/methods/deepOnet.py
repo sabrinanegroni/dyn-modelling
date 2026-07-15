@@ -92,3 +92,28 @@ def train_validation(model, optimizer, branch_inputs_train, trunk_inputs, output
 
     return (model, jnp.stack(train_loss_history),
             jnp.stack(val_loss_history), jnp.array(val_steps))
+
+
+def evaluate_test_error(model, signal_test, queries, y_test, n_cells, n_vars, n_time):
+    y_pred = jax.vmap(
+        jax.vmap(model, in_axes=(None, 0)),
+        in_axes=(0, None)
+    )(signal_test, queries)  # (n_traj, n_queries)
+
+    mse = jnp.mean((y_pred - y_test) ** 2)
+    rel_l2 = jnp.linalg.norm(y_pred - y_test) / jnp.linalg.norm(y_test)
+
+    pred_r = y_pred.reshape(y_pred.shape[0], n_cells, n_vars, n_time)
+    true_r = y_test.reshape(y_test.shape[0], n_cells, n_vars, n_time)
+
+    def sq_norm(x, axis):
+        return jnp.sqrt(jnp.sum(x ** 2, axis=axis))
+
+    per_cell_rel_err = sq_norm(pred_r - true_r, axis=(0, 2, 3)) / sq_norm(true_r, axis=(0, 2, 3))
+    per_var_rel_err  = sq_norm(pred_r - true_r, axis=(0, 1, 3)) / sq_norm(true_r, axis=(0, 1, 3))
+
+    return {
+        "mse": mse,
+        "rel_l2": rel_l2,
+        "per_cell_rel_err": per_cell_rel_err,  
+        "per_var_rel_err":  per_var_rel_err,   }

@@ -16,6 +16,7 @@ dependencies = [
     "optax>=0.2.8",
     "pandas>=3.0.2",
     "pydmd>=2025.8.1",
+    "pysindy>=2.1.0",
     "scipy>=1.17.1",
     "tqdm>=4.67.3",
 ]

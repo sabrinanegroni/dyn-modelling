@@ -30,28 +30,28 @@ def sample_signal_params(n_traj: int, t_span: tuple , rng: np.random.Generator):
     return t_on, t_off
 
 
-def build_query_grid(n_cells: int, t_eval: np.ndarray, rescale: bool = True) -> np.ndarray:
+
+def build_query_grid(rows: int, cols: int, t_eval: np.ndarray, rescale: bool = True) -> np.ndarray:
     """
-    Trunk input for DeepONet: (cell_index, variable_index, time_index).
-    If rescale=True, each dimension is rescaled to [0, 1].
+    Trunk input for DeepONet: (x, y, one_hot(variable), time).
+    x, y, t are rescaled to [0, 1] if rescale=True; variable is one-hot (3 dims).
     """
     n_vars = 3
     t_min, t_max = t_eval.min(), t_eval.max()
 
     query_rows = []
-    for i, var, step in product(range(n_cells), range(n_vars), range(len(t_eval))):
+    for x, y, var, step in product(range(rows), range(cols), range(n_vars), range(len(t_eval))):
+        var_onehot = [1.0 if k == var else 0.0 for k in range(n_vars)]
         if rescale:
-            query_rows.append([
-                i   / max(n_cells - 1, 1),
-                var / (n_vars - 1),
+            row = [
+                x / max(rows - 1, 1),
+                y / max(cols - 1, 1),
+                *var_onehot,
                 (t_eval[step] - t_min) / (t_max - t_min),
-            ])
+            ]
         else:
-            query_rows.append([
-                float(i),
-                float(var),
-                float(t_eval[step]),
-            ])
+            row = [float(x), float(y), *var_onehot, float(t_eval[step])]
+        query_rows.append(row)
     return np.array(query_rows, dtype=np.float32)
 
 
@@ -75,7 +75,7 @@ def generate_deeponet_dataset(
     dist_matrix = compute_distance_matrix(g)
     n_cells     = g.vcount()
 
-    queries   = build_query_grid(n_cells, t_eval, rescale=rescale)
+    queries   = build_query_grid(rows, cols, t_eval, rescale=rescale)
     n_queries = queries.shape[0]
     m         = len(t_eval)
 
