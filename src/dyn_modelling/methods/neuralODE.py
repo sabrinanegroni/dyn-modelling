@@ -54,7 +54,7 @@ def vf_forward(vf_params: list, x: Array, t: Array) -> Array:
 # ODE SOLVER
 # ---------------------------------------------------------------------------
 
-def solve_node(vf_params: list, y0: Array, ts: Array) -> Array:
+def solve_node(vf_params: list, y_0: Array, ts: Array) -> Array:
     """
     Integrate dx/dt = vf(x, t) from ts[0] to ts[-1].
 
@@ -70,11 +70,11 @@ def solve_node(vf_params: list, y0: Array, ts: Array) -> Array:
         diffrax.Tsit5(),
         t0=ts[0],
         t1=ts[-1],
-        dt0 =0.1, 
-        y0=y0,
+        dt0 = None, 
+        y0=y_0,
         stepsize_controller=diffrax.PIDController(rtol=1e-3, atol=1e-6),
         saveat=diffrax.SaveAt(ts=ts),
-        max_steps=1_000
+        max_steps= 1000
     )
     return solution.ys
 
@@ -98,10 +98,11 @@ def make_neural_ode():
 # ---------------------------------------------------------------------------
 # TRAINING
 # ---------------------------------------------------------------------------
-def train_adam(vf_params, y0, ts, y_true, loss_fn, grad_fn,
-          n_epochs=10_000, lr=1e-3) -> tuple:
-    
-    optimizer = optax.adam(lr)
+def train_adam(vf_params, y0, ts, y_true, loss_fn, grad_fn, n_epochs, lr):
+    optimizer = optax.chain(
+        optax.clip_by_global_norm(1.0),
+        optax.adam(lr)
+    )
     opt_state = optimizer.init(vf_params)
     loss_history = []
 
@@ -147,3 +148,25 @@ def train_SGD(vf_params: list, y0: np.ndarray, ts: np.ndarray, y_true: np.ndarra
 
     return vf_params, loss_history
 
+#----------------------------------------------------------------------------
+# PREDICTION ERRORS
+#----------------------------------------------------------------------------
+
+def per_variable_error(y_pred, y_true, N):
+    """Relative L2 error per variable (u, v, s)"""
+    return {
+        name: float(jnp.linalg.norm(y_pred[:, i::3] - y_true[:, i::3])
+                     / jnp.linalg.norm(y_true[:, i::3]))
+        for i, name in enumerate(['u', 'v', 's'])
+    }
+
+
+def per_cell_error(y_pred, y_true, N):
+    """Relative L2 error per cell"""
+    per_cell = jnp.zeros(N)
+    for cell in range(N):
+        idx = jnp.array([3 * cell, 3 * cell + 1, 3 * cell + 2])
+        per_cell = per_cell.at[cell].set(
+            jnp.linalg.norm(y_pred[:, idx] - y_true[:, idx]) / jnp.linalg.norm(y_true[:, idx])
+        )
+    return per_cell
